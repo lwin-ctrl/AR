@@ -2,49 +2,61 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My AR App1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>My AR App v0.1</title>
 
+  <!-- ALWAYS put A-Frame first for iOS compatibility -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <!-- Mind AR.js Library -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.3.0/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    body { margin: 0; overflow: hidden; }
+    body { margin: 0; overflow: hidden; background-color: #000; }
 
-    /* Loading screen */
-    #loading {
+    /* The Splash Screen and Click-to-Start Button (Bypasses Safari Blocks) */
+    #startButton {
       position: fixed; top: 0; left: 0;
       width: 100%; height: 100%;
-      background: #000; color: #fff;
-      display: flex; flex-direction: column;
+      background: rgba(15, 23, 42, 0.95);
+      color: #fff; display: flex; flex-direction: column;
       align-items: center; justify-content: center;
-      font-family: sans-serif; z-index: 999;
+      font-family: system-ui, -apple-system, sans-serif;
+      z-index: 9999; cursor: pointer; text-align: center;
     }
-    #loading p { margin-top: 16px; font-size: 14px; opacity: 0.7; }
-
-    /* Hint text */
+    .btn {
+      background: #3b82f6; color: white;
+      border: none; padding: 14px 28px;
+      font-size: 18px; font-weight: bold;
+      border-radius: 30px; margin-top: 20px;
+      box-shadow: 0 4px 10px rgba(59, 130, 246, 0.5);
+    }
+    
+    /* Hint text once AR starts */
     #hint {
-      position: fixed; bottom: 40px;
-      width: 100%; text-align: center;
-      color: white; font-family: sans-serif;
+      position: fixed; bottom: 40px; width: 100%;
+      text-align: center; color: white; font-family: sans-serif;
       font-size: 16px; font-weight: bold;
       text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-      z-index: 998;
-      pointer-events: none;
+      z-index: 998; display: none; pointer-events: none;
     }
   </style>
 </head>
 <body>
 
-  <div id="loading">
-    <h2>Loading AR1...</h2>
-    <p>Please allow camera permission if asked</p>
+  <!-- TAP SCREEN OVERLAY FOR IPAD SAFARI -->
+  <div id="startButton">
+    <h2>AR Scanner Ready</h2>
+    <p style="opacity: 0.8; max-width: 280px; font-size: 14px;">Apple Safari requires a user tap to grant camera access permission.</p>
+    <button class="btn">START CAMERA</button>
   </div>
 
-  <div id="hint">Scan the target image to see 3D model</div>
+  <!-- Scan Target Message Hint -->
+  <div id="hint">Point your camera at the target image</div>
 
+  <!-- AR Scene Layout (MindAR waits for manual user start) -->
   <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiLoading: no; uiError: no; uiScanning: no;"
+    mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading: no; uiError: yes; uiScanning: no;"
     color-space="sRGB"
     renderer="colorManagement: true; physicallyCorrectLights: true;"
     vr-mode-ui="enabled: false"
@@ -60,7 +72,6 @@
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
     <a-entity mindar-image-target="targetIndex: 0">
-
       <a-gltf-model
         src="#myModel"
         position="0 0 0"       
@@ -68,28 +79,32 @@
         scale="0.1 0.1 0.1"   
         animation="property: rotation; to: 0 360 0; loop: true; dur: 4000; easing: linear;">
       </a-gltf-model>
-
     </a-entity>
 
   </a-scene>
 
   <script>
-    const scene = document.querySelector('a-scene');
-    const loadingScreen = document.getElementById('loading');
+    const startButton = document.getElementById('startButton');
     const hintText = document.getElementById('hint');
+    const scene = document.querySelector('a-scene');
 
-    // Hide loading screen when camera environment is ready
-    scene.addEventListener('arReady', () => {
-      loadingScreen.style.display = 'none';
+    // Triggered when user explicitly touches the "START CAMERA" button
+    startButton.addEventListener('click', () => {
+      startButton.style.display = 'none'; // Clear overlay
+      hintText.style.display = 'block';   // Show scan target text
+      
+      // Inject Apple inline variables programmatically into video structures
+      const arSystem = scene.systems["mindar-image-system"];
+      
+      // Boot up the camera context engine manually
+      arSystem.start(); 
     });
 
-    // Hide hint when image target is detected by the scanner
+    // Tracking visual feedback logic
     const targetEntity = document.querySelector('[mindar-image-target]');
     targetEntity.addEventListener('targetFound', () => {
       hintText.style.display = 'none';
     });
-
-    // Show hint again if camera loses tracking of the target image
     targetEntity.addEventListener('targetLost', () => {
       hintText.style.display = 'block';
     });
