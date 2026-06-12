@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My AR App</title>
+
+  <!-- Mind AR.js Library -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-image-aframe.prod.js"></script>
+
+  <!-- A-Frame 3D Library -->
+  <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+
+  <style>
+    body { margin: 0; overflow: hidden; }
+
+    /* Loading screen */
+    #loading {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: #000; color: #fff;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      font-family: sans-serif; z-index: 999;
+    }
+    #loading p { margin-top: 16px; font-size: 14px; opacity: 0.7; }
+
+    /* Hint text */
+    #hint {
+      position: fixed; bottom: 40px;
+      width: 100%; text-align: center;
+      color: white; font-family: sans-serif;
+      font-size: 15px; z-index: 100;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.8);
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Loading screen -->
+  <div id="loading">
+    <div style="font-size:32px">📷</div>
+    <p>AR Camera ဖွင့်နေသည်...</p>
+  </div>
+
+  <!-- Hint -->
+  <div id="hint">🎯 Image ကို camera ဖြင့် ရိုက်ပါ</div>
+
+  <!-- AR Scene -->
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets.mind;
+                  autoStart: true;
+                  uiLoading: no;
+                  uiError: no;
+                  uiScanning: no;"
+    color-space="sRGB"
+    renderer="colorManagement: true; physicallyCorrectLights: true;"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false">
+
+    <!-- Assets (3D model load) -->
+    <a-assets>
+      <a-asset-item id="myModel" src="./my-model.glb"></a-asset-item>
+    </a-assets>
+
+    <!-- Camera -->
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <!-- Image Target (targetIndex: 0 = ပထမဆုံးပုံ) -->
+    <a-entity mindar-image-target="targetIndex: 0">
+
+      <!-- 3D Model -->
+      <a-gltf-model
+        src="#myModel"
+        position="0 0 0"       <!-- X Y Z နေရာ -->
+        rotation="0 0 0"       <!-- X Y Z လှည့်မှု -->
+        scale="0.1 0.1 0.1"   <!-- အကြီးအသေး -->
+        animation="property: rotation;
+                    to: 0 360 0;
+                    loop: true;
+                    dur: 4000;
+                    easing: linear;"
+      ></a-gltf-model>
+
+    </a-entity>
+
+  </a-scene>
+
+  <!-- JavaScript: Loading hide + Target events -->
+  <script>
+    const scene = document.querySelector('a-scene');
+
+    // Camera ဖွင့်ပြီးနောက် loading screen ဖျောက်ပါ
+    scene.addEventListener('arReady', () => {
+      document.getElementById('loading').style.display = 'none';
+    });
+
+    // Image target တွေ့လျှင် hint ပြောင်းပါ
+    scene.addEventListener('targetFound', () => {
+      document.getElementById('hint').textContent = '✅ 3D Model ပေါ်နေသည်!';
+    });
+
+    // Image target ဆုံးရှုံးလျှင် hint ပြောင်းပါ
+    scene.addEventListener('targetLost', () => {
+      document.getElementById('hint').textContent = '🎯 Image ကို camera ဖြင့် ရိုက်ပါ';
+    });
+  </script>
+
+</body>
+</html>
