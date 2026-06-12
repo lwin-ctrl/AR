@@ -4,64 +4,51 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>My AR App v0.2</title>
+  <title>My AR App v0.3</title>
 
-  <!-- IMPORTANT: Correct stable versions for iOS Safari -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.3.0/dist/mindar-image-aframe.prod.js"></script>
 
   <style>
-    body { margin: 0; overflow: hidden; background-color: #000; font-family: -apple-system, sans-serif; }
+    body { margin: 0; overflow: hidden; background-color: #000; }
 
-    #startButton {
+    /* Centered Custom Start UI Button */
+    #startOverlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: #111827; color: #fff;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      z-index: 9999; text-align: center; padding: 20px; box-sizing: border-box;
+      z-index: 9999; text-align: center; font-family: -apple-system, sans-serif;
     }
-    .btn {
+    .start-btn {
       background: #2563eb; color: white; border: none; 
-      padding: 16px 32px; font-size: 18px; font-weight: bold;
-      border-radius: 12px; margin-top: 20px; cursor: pointer;
+      padding: 16px 36px; font-size: 18px; font-weight: bold;
+      border-radius: 30px; margin-top: 20px; cursor: pointer;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
     }
     
     #hint {
       position: fixed; bottom: 40px; width: 100%; text-align: center;
-      color: white; font-size: 16px; font-weight: bold;
+      color: white; font-family: sans-serif; font-size: 16px; font-weight: bold;
       text-shadow: 0 2px 4px rgba(0,0,0,0.8); z-index: 998; display: none;
-    }
-
-    /* Debug Box to see errors on iPad screen */
-    #debugBox {
-      position: fixed; top: 10px; left: 10px; width: calc(100% - 20px);
-      max-height: 120px; background: rgba(0,0,0,0.8); color: #ff4545;
-      font-family: monospace; font-size: 11px; padding: 10px;
-      border-radius: 6px; overflow-y: auto; z-index: 10000; display: none;
     }
   </style>
 </head>
 <body>
 
-  <!-- Screen Debug Log for Errors -->
-  <div id="debugBox"></div>
-
-  <!-- Splash / Permission Screen -->
-  <div id="startButton">
-    <h2>AR Scanner Setup</h2>
-    <p style="opacity: 0.7; max-width: 300px; font-size: 14px; line-height: 1.4;">
-      Tap start and accept the prompt to access the iPad camera. Use standard Safari browser window mode.
+  <div id="startOverlay">
+    <h2>AR Engine Ready</h2>
+    <p style="opacity: 0.7; max-width: 280px; font-size: 14px; line-height: 1.4;">
+      Tap below and select "Allow" when Safari asks for camera access permissions.
     </p>
-    <button class="btn" id="clickToStart">ALLOW & START</button>
+    <button class="start-btn" id="startButton">START AR CAMERA</button>
   </div>
 
-  <div id="hint">Point camera at target image</div>
+  <div id="hint">Point your camera at the target image</div>
 
-  <!-- AR Scene Layout -->
   <a-scene
     mindar-image="imageTargetSrc: ./targets.mind; autoStart: false; uiLoading: no; uiError: yes; uiScanning: no;"
     color-space="sRGB"
-    renderer="colorManagement: true; physicallyCorrectLights: true; antialias: true;"
+    renderer="colorManagement: true; physicallyCorrectLights: true;"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false">
 
@@ -74,7 +61,7 @@
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <a-entity mindar-image-target="targetIndex: 0">
+    <a-entity id="target1" mindar-image-target="targetIndex: 0">
       <a-gltf-model
         src="#myModel"
         position="0 0 0"       
@@ -87,57 +74,28 @@
   </a-scene>
 
   <script>
-    const debugBox = document.getElementById('debugBox');
+    const startOverlay = document.getElementById('startOverlay');
     const startButton = document.getElementById('startButton');
-    const clickToStart = document.getElementById('clickToStart');
     const hintText = document.getElementById('hint');
     const scene = document.querySelector('a-scene');
 
-    // On-Screen Error Capturing (Helps find the issue if camera breaks)
-    window.onerror = function(msg, url, line) {
-      debugBox.style.display = 'block';
-      debugBox.innerHTML += `<div>Error: ${msg} (Line ${line})</div>`;
-      return false;
-    };
-
-    clickToStart.addEventListener('click', async () => {
-      startButton.style.display = 'none';
+    startButton.addEventListener('click', () => {
+      // Hide the start layer UI overlay
+      startOverlay.style.display = 'none';
       hintText.style.display = 'block';
 
-      try {
-        // Step 1: Force request native device media stream permissions
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: "environment" }, 
-          audio: false 
+      // Safe, native initialization of MindAR inside the A-Frame ecosystem
+      if (scene.hasLoaded) {
+        scene.systems["mindar-image-system"].start();
+      } else {
+        scene.addEventListener('loaded', () => {
+          scene.systems["mindar-image-system"].start();
         });
-        
-        // Stop stream tracking details immediately so MindAR handles it seamlessly
-        stream.getTracks().forEach(track => track.stop());
-
-        // Step 2: Initialize MindAR environment 
-        if (scene.hasLoaded) {
-          startARSystem();
-        } else {
-          scene.addEventListener('loaded', startARSystem);
-        }
-      } catch (err) {
-        debugBox.style.display = 'block';
-        debugBox.innerHTML += `<div>Camera Blocked: ${err.message}. Check Settings -> Safari -> Camera permissions.</div>`;
       }
     });
 
-    function startARSystem() {
-      const arSystem = scene.systems["mindar-image-system"];
-      if (arSystem) {
-        arSystem.start();
-      } else {
-        debugBox.style.display = 'block';
-        debugBox.innerHTML += `<div>System Error: MindAR engine could not map system profiles.</div>`;
-      }
-    }
-
-    // Tracker monitoring hooks
-    const targetEntity = document.querySelector('[mindar-image-target]');
+    // Tracking Event Triggers
+    const targetEntity = document.getElementById('target1');
     targetEntity.addEventListener('targetFound', () => { hintText.style.display = 'none'; });
     targetEntity.addEventListener('targetLost', () => { hintText.style.display = 'block'; });
   </script>
